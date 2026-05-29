@@ -50,25 +50,55 @@ const TICKET_TYPES = {
 };
 
 const APPLICATION_POSITIONS = {
-    staff: { name: "🛠 Staff Team", emoji: "🛠", color: "#5865F2", description: "Help moderate and manage the community" },
-    wallpaper: { name: "🖼 Wallpaper Uploader", emoji: "🖼", color: "#9C27B0", description: "Submit high-quality PC and mobile wallpapers" },
-    event: { name: "🎉 Event Hoster", emoji: "🎉", color: "#FEE75C", description: "Organize fun community events" },
-    partnership: { name: "🤝 Partnership", emoji: "🤝", color: "#57F287", description: "Handle collaborations and partnerships" },
-    developer: { name: "💻 Developer", emoji: "💻", color: "#17A2B8", description: "Work on bots and coding projects" }
+    staff: { 
+        name: "🛠 Staff Team", 
+        emoji: "🛠", 
+        color: "#5865F2", 
+        description: "Help moderate and manage the community",
+        roleId: "1508204459799613634"
+    },
+    wallpaper: { 
+        name: "🖼 Wallpaper Uploader", 
+        emoji: "🖼", 
+        color: "#9C27B0", 
+        description: "Submit high-quality PC and mobile wallpapers",
+        roleId: "1509922150138646680"
+    },
+    event: { 
+        name: "🎉 Event Hoster", 
+        emoji: "🎉", 
+        color: "#FEE75C", 
+        description: "Organize fun community events",
+        roleId: "1509922272323043461"
+    },
+    partnership: { 
+        name: "🤝 Partnership", 
+        emoji: "🤝", 
+        color: "#57F287", 
+        description: "Handle collaborations and partnerships",
+        roleId: null
+    },
+    developer: { 
+        name: "💻 Developer", 
+        emoji: "💻", 
+        color: "#17A2B8", 
+        description: "Work on bots and coding projects",
+        roleId: "1509921949717893201"
+    }
 };
 
-// Standard staff application questions (for non-wallpaper positions)
+// الأسئلة الجديدة ديال Staff Team
 const STANDARD_APPLICATION_QUESTIONS = [
-    { id: "fullname", question: "📝 What is your full name?", example: "Example: John Doe" },
-    { id: "age", question: "🎂 How old are you?", example: "Example: 18" },
-    { id: "why", question: "💭 Why do you want to join the staff team?", example: "Example: I want to help the community grow..." },
-    { id: "skills", question: "🛠️ Do you have skills? What are they?", example: "Example: Graphic design, moderation, coding..." },
-    { id: "experience", question: "📜 Do you have experience?", example: "Example: I was a mod on another server..." },
-    { id: "availability", question: "⏰ How much time can you be online?", example: "Example: 3-4 hours per day" },
-    { id: "device", question: "💻 PC / Phone / Both?", example: "Example: PC" }
+    { id: "fullname", question: "📝 What's your name ?", example: "Example: John Doe" },
+    { id: "age", question: "🎂 How old are you ?", example: "Example: 18" },
+    { id: "why", question: "💭 Why do you want to join Staff Team ?", example: "Example: I want to help the community grow..." },
+    { id: "skills", question: "🛠️ Do you have skills ? What are they ?", example: "Example: Graphic design, moderation, coding..." },
+    { id: "experience", question: "📜 Do you have experience ?", example: "Example: I was a mod on another server..." },
+    { id: "availability", question: "⏰ How many hours can you be online ?", example: "Example: 3-4 hours per day" },
+    { id: "device", question: "💻 Device :\nOption 1 : phone\nOption 2 : Computer\nOption 3 : Both/Bjouj bihom", example: "Example: Computer" }
 ];
 
-// Custom questions for Wallpaper Uploader position
+// أسئلة Wallpaper Uploader (نفسها ما تبدلاتش)
 const WALLPAPER_APPLICATION_QUESTIONS = [
     { id: "type", question: "🖼 What type of wallpapers do you upload?", example: "Example: Gaming, Nature, Anime, Abstract, Minimalist, etc." },
     { id: "platform", question: "📱 PC or Mobile wallpapers? (Or both)", example: "Example: Both, PC (1920x1080), Mobile (1080x2340)" },
@@ -285,7 +315,6 @@ function buildApplicationEmbed(application, user, status = null, reason = null) 
         .setTimestamp()
         .setFooter({ text: footerText });
     
-    // Define labels based on position type
     const isWallpaper = application.position === 'wallpaper';
     
     const standardLabels = {
@@ -472,7 +501,6 @@ async function startApplication(user, position) {
         return false;
     }
     
-    // Select the correct question set based on position
     const questions = position === 'wallpaper' ? WALLPAPER_APPLICATION_QUESTIONS : STANDARD_APPLICATION_QUESTIONS;
     
     const application = {
@@ -484,7 +512,7 @@ async function startApplication(user, position) {
         step: 0,
         answers: {},
         timestamp: Date.now(),
-        questions: questions // Store which questions are being used
+        questions: questions
     };
     
     activeApplications.set(user.id, application);
@@ -642,11 +670,9 @@ client.once('ready', async () => {
         return;
     }
 
-    // Load saved tickets
     loadActiveTickets();
     await verifyAndCleanTickets(guild);
     
-    // Display loaded roles
     console.log(`\n📊 Staff Roles Loaded (${staffRolesArray.length}):`);
     staffRolesArray.forEach(roleId => {
         const role = guild.roles.cache.get(roleId);
@@ -664,7 +690,6 @@ client.once('ready', async () => {
         console.log(`\n✓ Accepted Role: ${acceptedRole ? acceptedRole.name : 'Unknown role'} (${ACCEPTED_ROLE_ID})`);
     }
 
-    // Deploy panels
     if (TICKET_PANEL_CHANNEL_ID) {
         const ticketPanelChannel = client.channels.cache.get(TICKET_PANEL_CHANNEL_ID);
         if (ticketPanelChannel) {
@@ -966,7 +991,6 @@ client.on('interactionCreate', async (interaction) => {
     if (!interaction.isButton()) return;
     if (!interaction.customId.startsWith('app_approve_')) return;
     
-    // Check if user has ANY reviewer role (multiple roles support)
     if (!isReviewer(interaction.member)) {
         const roleMentions = reviewerRolesArray.map(id => `<@&${id}>`).join(', ');
         return interaction.reply({ 
@@ -998,7 +1022,6 @@ client.on('interactionCreate', async (interaction) => {
     const originalEmbed = interaction.message.embeds[0];
     const answers = {};
     
-    // Determine which answer keys to extract based on position
     const isWallpaper = position === 'wallpaper';
     const answerKeys = isWallpaper 
         ? ['type', 'platform', 'origin', 'portfolio', 'activity', 'motivation']
@@ -1022,10 +1045,11 @@ client.on('interactionCreate', async (interaction) => {
     const acceptedEmbed = buildApplicationEmbed(application, user, 'accepted');
     await sendLog(guild, APP_ACCEPTED_CHANNEL_ID, acceptedEmbed);
     
-    if (ACCEPTED_ROLE_ID && member) {
+    // إضافة الرول حسب المنصب
+    if (positionConfig.roleId && member) {
         try {
-            await member.roles.add(ACCEPTED_ROLE_ID);
-            console.log(`✅ Added role ${ACCEPTED_ROLE_ID} to ${user.tag}`);
+            await member.roles.add(positionConfig.roleId);
+            console.log(`✅ Added role ${positionConfig.roleId} (${positionConfig.name}) to ${user.tag}`);
         } catch (error) {
             console.error(`Failed to add role to ${user.tag}:`, error.message);
         }
@@ -1078,7 +1102,6 @@ client.on('interactionCreate', async (interaction) => {
     if (!interaction.isButton()) return;
     if (!interaction.customId.startsWith('app_deny_')) return;
     
-    // Check if user has ANY reviewer role (multiple roles support)
     if (!isReviewer(interaction.member)) {
         const roleMentions = reviewerRolesArray.map(id => `<@&${id}>`).join(', ');
         return interaction.reply({ 
