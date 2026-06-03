@@ -12,7 +12,6 @@ const {
     ACCEPTED_ROLE_ID,
     BANNER_URL = "https://media.discordapp.net/attachments/1480969775344652470/1496647110525845625/DF7E4FDA-66D3-49FF-BD5E-7C746253AE2D.png",
     TICKET_CATEGORY_ID,
-    TICKET_PANEL_CHANNEL_ID,
     TICKET_LOG_CHANNEL_ID,
     TRANSCRIPT_CHANNEL_ID,
     APP_PANEL_CHANNEL_ID,
@@ -40,13 +39,16 @@ const client = new Client({
 });
 
 // ============================================
-// CONFIGURATION
+// CONFIGURATION - NEW CHANNELS AND ROLE
 // ============================================
+const TICKET_PANEL_CHANNEL_ID_NEW = "1511854009139331255";  // New panel channel
+const TICKET_LOG_CHANNEL_ID_NEW = "1511854023127339088";    // New log channel
+const SUPPORT_ROLE_ID = "1511853901937119322";               // Role that can control tickets
+
+// Ticket types matching the image
 const TICKET_TYPES = {
-    pub: { name: "Public Lounge", emoji: "🍻", color: "#38BDF8", desc: "General discussions & community chats" },
-    bugs: { name: "Bug Report", emoji: "🐛", color: "#EF4444", desc: "Report technical issues or glitches" },
-    abuse: { name: "Abuse Report", emoji: "⚠️", color: "#F97316", desc: "Report rule violations or harassment" },
-    server: { name: "Server Support", emoji: "⚙️", color: "#8B5CF6", desc: "Technical support & server inquiries" }
+    help: { name: "Help", emoji: "🎫", color: "#38BDF8", desc: "Press to open a ticket for general assistance" },
+    report: { name: "Report", emoji: "⚠️", color: "#EF4444", desc: "Press to open a ticket to report a player or bug" }
 };
 
 const APPLICATION_POSITIONS = {
@@ -98,7 +100,7 @@ const STANDARD_APPLICATION_QUESTIONS = [
     { id: "device", question: "💻 Device :\nOption 1 : phone\nOption 2 : Computer\nOption 3 : Both/Bjouj bihom", example: "Example: Computer" }
 ];
 
-// أسئلة Wallpaper Uploader (نفسها ما تبدلاتش)
+// أسئلة Wallpaper Uploader
 const WALLPAPER_APPLICATION_QUESTIONS = [
     { id: "type", question: "🖼 What type of wallpapers do you upload?", example: "Example: Gaming, Nature, Anime, Abstract, Minimalist, etc." },
     { id: "platform", question: "📱 PC or Mobile wallpapers? (Or both)", example: "Example: Both, PC (1920x1080), Mobile (1080x2340)" },
@@ -111,6 +113,12 @@ const WALLPAPER_APPLICATION_QUESTIONS = [
 // Parse multiple roles from comma-separated strings
 const staffRolesArray = STAFF_ROLES ? STAFF_ROLES.split(',').map(r => r.trim()).filter(r => r.length > 0) : [];
 const reviewerRolesArray = REVIEWER_ROLE_ID ? REVIEWER_ROLE_ID.split(',').map(r => r.trim()).filter(r => r.length > 0) : [];
+
+// Add support role to staff roles for ticket access
+const allTicketAccessRoles = [...staffRolesArray];
+if (SUPPORT_ROLE_ID && !allTicketAccessRoles.includes(SUPPORT_ROLE_ID)) {
+    allTicketAccessRoles.push(SUPPORT_ROLE_ID);
+}
 
 // Ticket persistence storage
 const TICKET_STORAGE_FILE = '/tmp/active_tickets.json';
@@ -225,10 +233,15 @@ async function generateTranscript(channel, ticketData) {
     }
 }
 
-function isStaff(member) {
+function canManageTickets(member) {
     if (!member) return false;
-    if (staffRolesArray.length === 0) return false;
-    return staffRolesArray.some(roleId => member.roles.cache.has(roleId));
+    // Check if member has support role
+    if (SUPPORT_ROLE_ID && member.roles.cache.has(SUPPORT_ROLE_ID)) return true;
+    // Check if member has any staff role
+    if (staffRolesArray.length > 0 && staffRolesArray.some(roleId => member.roles.cache.has(roleId))) return true;
+    // Check if member is admin
+    if (member.permissions.has(PermissionFlagsBits.Administrator)) return true;
+    return false;
 }
 
 function isReviewer(member) {
@@ -237,13 +250,21 @@ function isReviewer(member) {
     return reviewerRolesArray.some(roleId => member.roles.cache.has(roleId));
 }
 
-function getStaffMentions() {
-    if (staffRolesArray.length === 0) return "";
-    return staffRolesArray.map(id => `<@&${id}>`).join(', ');
+function getSupportRoleMention() {
+    if (SUPPORT_ROLE_ID) return `<@&${SUPPORT_ROLE_ID}>`;
+    return "";
 }
 
-function getStaffPermissionOverwrites() {
-    return staffRolesArray.map(roleId => ({ 
+function getTicketAccessRoles() {
+    const roles = [];
+    if (SUPPORT_ROLE_ID) roles.push(SUPPORT_ROLE_ID);
+    roles.push(...staffRolesArray);
+    return roles;
+}
+
+function getTicketPermissionOverwrites() {
+    const roleIds = getTicketAccessRoles();
+    return roleIds.map(roleId => ({ 
         id: roleId, 
         allow: [
             PermissionFlagsBits.ViewChannel, 
@@ -280,145 +301,47 @@ async function safeChannelBulkDelete(channel, limit = 10) {
 }
 
 // ============================================
-// APPLICATION EMBED BUILDER
-// ============================================
-function buildApplicationEmbed(application, user, status = null, reason = null) {
-    const positionConfig = APPLICATION_POSITIONS[application.position];
-    const isAccepted = status === 'accepted';
-    const isRejected = status === 'rejected';
-    
-    let title = `${positionConfig.emoji} NEW APPLICATION - ${positionConfig.name}`;
-    let color = typeof positionConfig.color === 'string' ? parseInt(positionConfig.color.replace('#', ''), 16) : positionConfig.color;
-    let footerText = "Application awaiting review";
-    
-    if (isAccepted) {
-        title = `${positionConfig.emoji} APPLICATION ACCEPTED - ${positionConfig.name}`;
-        color = 0x22C55E;
-        footerText = "Application approved";
-    } else if (isRejected) {
-        title = `${positionConfig.emoji} APPLICATION DENIED - ${positionConfig.name}`;
-        color = 0xEF4444;
-        footerText = "Application denied";
-    }
-    
-    const embed = new EmbedBuilder()
-        .setTitle(title)
-        .setDescription(
-            `**Applicant:** ${user.tag} (<@${application.userId}>)\n` +
-            `**Position:** ${positionConfig.name}\n` +
-            `**Submitted:** <t:${Math.floor(application.timestamp / 1000)}:F>\n` +
-            `**User ID:** \`${application.userId}\``
-        )
-        .setColor(color)
-        .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 256 }))
-        .setImage(BANNER_URL)
-        .setTimestamp()
-        .setFooter({ text: footerText });
-    
-    const isWallpaper = application.position === 'wallpaper';
-    
-    const standardLabels = {
-        fullname: "📝 Full name",
-        age: "🎂 Age",
-        why: "💭 Why join staff team?",
-        skills: "🛠️ Skills",
-        experience: "📜 Experience",
-        availability: "⏰ Availability",
-        device: "💻 Device"
-    };
-    
-    const wallpaperLabels = {
-        type: "🖼 Wallpaper Types",
-        platform: "📱 Platform",
-        origin: "🎨 Origin (Created/Collected)",
-        portfolio: "🔗 Portfolio / Examples",
-        activity: "⏱️ Upload Activity",
-        motivation: "💡 Motivation"
-    };
-    
-    const labels = isWallpaper ? wallpaperLabels : standardLabels;
-    
-    for (const [key, value] of Object.entries(application.answers)) {
-        const label = labels[key] || key;
-        embed.addFields({ 
-            name: label, 
-            value: value.length > 1024 ? value.substring(0, 1021) + '...' : value, 
-            inline: false 
-        });
-    }
-    
-    if (reason) {
-        embed.addFields({ name: "❌ Reason", value: `> ${reason}`, inline: false });
-    }
-    
-    return embed;
-}
-
-// ============================================
-// PANEL CREATION
+// TICKET PANEL - NEW DESIGN (LIKE THE IMAGE)
 // ============================================
 async function createTicketPanel(channel) {
     await safeChannelBulkDelete(channel, 10);
     
     const embed = new EmbedBuilder()
-        .setTitle("🌟 SUPPORT TICKET SYSTEM")
-        .setDescription(
-            `> **Welcome to our premium support hub**\n\n` +
-            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-            `**📌 HOW IT WORKS**\n` +
-            `• Select a ticket type below\n` +
-            `• A private channel will be created\n` +
-            `• Our team will assist you ASAP\n` +
-            `• Tickets are automatically logged\n\n` +
-            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-            `**⚡ BEFORE OPENING**\n` +
-            `• Be respectful and patient\n` +
-            `• Provide detailed information\n` +
-            `• Do not create multiple tickets\n\n` +
-            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-            `**⏰ RESPONSE TIME**\n` +
-            `• Average: 5-10 minutes\n` +
-            `• Peak hours: 15-20 minutes\n` +
-            `• 24/7 Support Available\n\n` +
-            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-            `*Click a button below to get started* 🚀`
-        )
         .setColor(0x2b2d31)
-        .setImage(BANNER_URL)
+        .setTitle("Bonbon Utilities")
+        .setDescription(
+            `**Minecraft Support Tickets**\n\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+            `**Help**\n` +
+            `Press to open a ticket for general assistance\n\n` +
+            `**Report**\n` +
+            `Press to open a ticket to report a player or bug\n\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+            `2026 BONBON™. We are here to help you!`
+        )
         .setFooter({ text: "Premium Support System • 24/7", iconURL: client.user.displayAvatarURL() })
         .setTimestamp();
 
-    const row1 = new ActionRowBuilder()
+    const row = new ActionRowBuilder()
         .addComponents(
             new ButtonBuilder()
-                .setCustomId('ticket_pub')
-                .setLabel("Public Lounge")
-                .setEmoji("🍻")
-                .setStyle(ButtonStyle.Success),
+                .setCustomId('ticket_help')
+                .setLabel("Help")
+                .setEmoji("🎫")
+                .setStyle(ButtonStyle.Primary),
             new ButtonBuilder()
-                .setCustomId('ticket_bugs')
-                .setLabel("Bug Report")
-                .setEmoji("🐛")
+                .setCustomId('ticket_report')
+                .setLabel("Report")
+                .setEmoji("⚠️")
                 .setStyle(ButtonStyle.Danger)
         );
-
-    const row2 = new ActionRowBuilder()
-        .addComponents(
-            new ButtonBuilder()
-                .setCustomId('ticket_abuse')
-                .setLabel("Abuse Report")
-                .setEmoji("⚠️")
-                .setStyle(ButtonStyle.Danger),
-            new ButtonBuilder()
-                .setCustomId('ticket_server')
-                .setLabel("Server Support")
-                .setEmoji("⚙️")
-                .setStyle(ButtonStyle.Primary)
-        );
     
-    await channel.send({ embeds: [embed], components: [row1, row2] });
+    await channel.send({ embeds: [embed], components: [row] });
 }
 
+// ============================================
+// APPLICATION PANEL
+// ============================================
 async function createApplicationPanel(channel) {
     await safeChannelBulkDelete(channel, 10);
     
@@ -657,12 +580,87 @@ async function cancelApplication(userId) {
     return true;
 }
 
+function buildApplicationEmbed(application, user, status = null, reason = null) {
+    const positionConfig = APPLICATION_POSITIONS[application.position];
+    const isAccepted = status === 'accepted';
+    const isRejected = status === 'rejected';
+    
+    let title = `${positionConfig.emoji} NEW APPLICATION - ${positionConfig.name}`;
+    let color = typeof positionConfig.color === 'string' ? parseInt(positionConfig.color.replace('#', ''), 16) : positionConfig.color;
+    let footerText = "Application awaiting review";
+    
+    if (isAccepted) {
+        title = `${positionConfig.emoji} APPLICATION ACCEPTED - ${positionConfig.name}`;
+        color = 0x22C55E;
+        footerText = "Application approved";
+    } else if (isRejected) {
+        title = `${positionConfig.emoji} APPLICATION DENIED - ${positionConfig.name}`;
+        color = 0xEF4444;
+        footerText = "Application denied";
+    }
+    
+    const embed = new EmbedBuilder()
+        .setTitle(title)
+        .setDescription(
+            `**Applicant:** ${user.tag} (<@${application.userId}>)\n` +
+            `**Position:** ${positionConfig.name}\n` +
+            `**Submitted:** <t:${Math.floor(application.timestamp / 1000)}:F>\n` +
+            `**User ID:** \`${application.userId}\``
+        )
+        .setColor(color)
+        .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 256 }))
+        .setImage(BANNER_URL)
+        .setTimestamp()
+        .setFooter({ text: footerText });
+    
+    const isWallpaper = application.position === 'wallpaper';
+    
+    const standardLabels = {
+        fullname: "📝 Full name",
+        age: "🎂 Age",
+        why: "💭 Why join staff team?",
+        skills: "🛠️ Skills",
+        experience: "📜 Experience",
+        availability: "⏰ Availability",
+        device: "💻 Device"
+    };
+    
+    const wallpaperLabels = {
+        type: "🖼 Wallpaper Types",
+        platform: "📱 Platform",
+        origin: "🎨 Origin (Created/Collected)",
+        portfolio: "🔗 Portfolio / Examples",
+        activity: "⏱️ Upload Activity",
+        motivation: "💡 Motivation"
+    };
+    
+    const labels = isWallpaper ? wallpaperLabels : standardLabels;
+    
+    for (const [key, value] of Object.entries(application.answers)) {
+        const label = labels[key] || key;
+        embed.addFields({ 
+            name: label, 
+            value: value.length > 1024 ? value.substring(0, 1021) + '...' : value, 
+            inline: false 
+        });
+    }
+    
+    if (reason) {
+        embed.addFields({ name: "❌ Reason", value: `> ${reason}`, inline: false });
+    }
+    
+    return embed;
+}
+
 // ============================================
 // READY EVENT
 // ============================================
 client.once('ready', async () => {
     console.log(`✨ ${client.user.tag} is online!`);
     console.log(`📋 Ticket & Application Bot - Multi-Role Support | Wallpaper Uploader System`);
+    console.log(`🎫 Ticket Panel Channel: ${TICKET_PANEL_CHANNEL_ID_NEW}`);
+    console.log(`📝 Ticket Log Channel: ${TICKET_LOG_CHANNEL_ID_NEW}`);
+    console.log(`👑 Support Role: ${SUPPORT_ROLE_ID}`);
     
     const guild = client.guilds.cache.get(GUILD_ID);
     if (!guild) {
@@ -679,6 +677,10 @@ client.once('ready', async () => {
         console.log(`  ✓ ${role ? role.name : 'Unknown role'} (${roleId})`);
     });
 
+    console.log(`\n📊 Support Role:`);
+    const supportRole = guild.roles.cache.get(SUPPORT_ROLE_ID);
+    console.log(`  ✓ ${supportRole ? supportRole.name : 'Unknown role'} (${SUPPORT_ROLE_ID})`);
+
     console.log(`\n📊 Reviewer Roles Loaded (${reviewerRolesArray.length}):`);
     reviewerRolesArray.forEach(roleId => {
         const role = guild.roles.cache.get(roleId);
@@ -690,12 +692,13 @@ client.once('ready', async () => {
         console.log(`\n✓ Accepted Role: ${acceptedRole ? acceptedRole.name : 'Unknown role'} (${ACCEPTED_ROLE_ID})`);
     }
 
-    if (TICKET_PANEL_CHANNEL_ID) {
-        const ticketPanelChannel = client.channels.cache.get(TICKET_PANEL_CHANNEL_ID);
-        if (ticketPanelChannel) {
-            await createTicketPanel(ticketPanelChannel);
-            console.log("\n✅ Ticket panel deployed!");
-        }
+    // Create ticket panel in the new channel
+    const ticketPanelChannel = client.channels.cache.get(TICKET_PANEL_CHANNEL_ID_NEW);
+    if (ticketPanelChannel) {
+        await createTicketPanel(ticketPanelChannel);
+        console.log("\n✅ Ticket panel deployed in channel: " + TICKET_PANEL_CHANNEL_ID_NEW);
+    } else {
+        console.log(`\n❌ Ticket panel channel ${TICKET_PANEL_CHANNEL_ID_NEW} not found!`);
     }
 
     if (APP_PANEL_CHANNEL_ID) {
@@ -732,14 +735,14 @@ client.on('interactionCreate', async (interaction) => {
         }
         
         await interaction.reply({ 
-            embeds: [new EmbedBuilder().setDescription("🔄 `Creating your premium ticket...`").setColor(0x38BDF8)], 
+            embeds: [new EmbedBuilder().setDescription("🔄 `Creating your ticket...`").setColor(0x38BDF8)], 
             ephemeral: true 
         });
         
         const ticketName = `${type}-${interaction.user.username}`;
         
         try {
-            const staffOverwrites = getStaffPermissionOverwrites();
+            const ticketOverwrites = getTicketPermissionOverwrites();
             
             const ticketChannel = await interaction.guild.channels.create({
                 name: ticketName,
@@ -749,7 +752,7 @@ client.on('interactionCreate', async (interaction) => {
                 permissionOverwrites: [
                     { id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
                     { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles] },
-                    ...staffOverwrites
+                    ...ticketOverwrites
                 ]
             });
             
@@ -767,8 +770,7 @@ client.on('interactionCreate', async (interaction) => {
                     `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
                     `**👋 Welcome ${interaction.user}!**\n\n` +
                     `> **Ticket Type:** ${typeConfig.name}\n` +
-                    `> **Category:** ${typeConfig.desc}\n` +
-                    `> **Priority:** Normal\n\n` +
+                    `> **Category:** ${typeConfig.desc}\n\n` +
                     `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
                     `**📝 INSTRUCTIONS**\n` +
                     `• Please describe your issue in detail\n` +
@@ -799,15 +801,17 @@ client.on('interactionCreate', async (interaction) => {
                         .setStyle(ButtonStyle.Secondary)
                 );
             
-            const mentionText = `${interaction.user} | ${getStaffMentions()}`;
+            const supportMention = getSupportRoleMention();
+            const mentionText = `${interaction.user} | ${supportMention}`;
             await ticketChannel.send({ content: mentionText, embeds: [welcomeEmbed], components: [actionRow] });
             
+            // Send log to the new log channel
             const logEmbed = new EmbedBuilder()
                 .setTitle("🎫 TICKET OPENED")
                 .setDescription(`**User:** ${interaction.user.tag}\n**Type:** ${typeConfig.name}\n**Channel:** ${ticketChannel}`)
                 .setColor(0x22C55E)
                 .setTimestamp();
-            await sendLog(interaction.guild, TICKET_LOG_CHANNEL_ID, logEmbed);
+            await sendLog(interaction.guild, TICKET_LOG_CHANNEL_ID_NEW, logEmbed);
             
             const successEmbed = new EmbedBuilder()
                 .setTitle("✅ TICKET CREATED")
@@ -832,9 +836,9 @@ client.on('interactionCreate', async (interaction) => {
             return interaction.reply({ content: "❌ This is not a valid ticket channel.", ephemeral: true });
         }
         
-        if (!isStaff(interaction.member)) {
+        if (!canManageTickets(interaction.member)) {
             return interaction.reply({ 
-                embeds: [new EmbedBuilder().setDescription("❌ Only staff members can close tickets.").setColor(0xEF4444)], 
+                embeds: [new EmbedBuilder().setDescription(`❌ Only ${getSupportRoleMention()} or staff members can close tickets.`).setColor(0xEF4444)], 
                 ephemeral: true 
             });
         }
@@ -855,12 +859,13 @@ client.on('interactionCreate', async (interaction) => {
             }
         }
         
+        // Send log to the new log channel
         const logEmbed = new EmbedBuilder()
             .setTitle("🔒 TICKET CLOSED")
             .setDescription(`**User:** ${ticketData.userTag}\n**Closed by:** ${interaction.user.tag}\n**Channel:** #${interaction.channel.name}`)
             .setColor(0xEF4444)
             .setTimestamp();
-        await sendLog(interaction.guild, TICKET_LOG_CHANNEL_ID, logEmbed);
+        await sendLog(interaction.guild, TICKET_LOG_CHANNEL_ID_NEW, logEmbed);
         
         try {
             await interaction.channel.delete();
@@ -878,9 +883,9 @@ client.on('interactionCreate', async (interaction) => {
             return interaction.reply({ content: "❌ This is not a valid ticket channel.", ephemeral: true });
         }
         
-        if (!isStaff(interaction.member)) {
+        if (!canManageTickets(interaction.member)) {
             return interaction.reply({ 
-                embeds: [new EmbedBuilder().setDescription("❌ Only staff members can claim tickets.").setColor(0xEF4444)], 
+                embeds: [new EmbedBuilder().setDescription(`❌ Only ${getSupportRoleMention()} or staff members can claim tickets.`).setColor(0xEF4444)], 
                 ephemeral: true 
             });
         }
@@ -905,12 +910,13 @@ client.on('interactionCreate', async (interaction) => {
         
         await interaction.reply({ embeds: [claimEmbed] });
         
+        // Send log to the new log channel
         const logEmbed = new EmbedBuilder()
             .setTitle("🎫 TICKET CLAIMED")
             .setDescription(`**Channel:** #${interaction.channel.name}\n**Staff:** ${interaction.user.tag}\n**Ticket Owner:** ${ticketData.userTag}`)
             .setColor(0x3B82F6)
             .setTimestamp();
-        await sendLog(interaction.guild, TICKET_LOG_CHANNEL_ID, logEmbed);
+        await sendLog(interaction.guild, TICKET_LOG_CHANNEL_ID_NEW, logEmbed);
     }
 });
 
@@ -1045,7 +1051,7 @@ client.on('interactionCreate', async (interaction) => {
     const acceptedEmbed = buildApplicationEmbed(application, user, 'accepted');
     await sendLog(guild, APP_ACCEPTED_CHANNEL_ID, acceptedEmbed);
     
-    // إضافة الرول حسب المنصب
+    // Add role based on position
     if (positionConfig.roleId && member) {
         try {
             await member.roles.add(positionConfig.roleId);
@@ -1233,7 +1239,7 @@ process.on('unhandledRejection', (error) => {
     console.error('❌ Unhandled rejection:', error);
 });
 
-process.on('uncaughtException', (error) => {
+process.on('uncaughtException', (error) {
     console.error('❌ Uncaught exception:', error);
 });
 
