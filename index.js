@@ -41,14 +41,23 @@ const client = new Client({
 // ============================================
 // CONFIGURATION - NEW CHANNELS AND ROLE
 // ============================================
-const TICKET_PANEL_CHANNEL_ID_NEW = "1511854009139331255";  // New panel channel
-const TICKET_LOG_CHANNEL_ID_NEW = "1511854023127339088";    // New log channel
+const TICKET_PANEL_CHANNEL_ID_NEW = "1511854009139331255";  // Minecraft Report panel channel
+const TICKET_PANEL_CHANNEL_ID_NORMAL = "1511873447641223381"; // Normal ticket panel channel
+const TICKET_LOG_CHANNEL_ID_NEW = "1511854023127339088";    // Log channel
 const SUPPORT_ROLE_ID = "1511853901937119322";               // Role that can control tickets
 
-// Ticket types matching the image
+// Ticket types for Minecraft Report panel
 const TICKET_TYPES = {
     help: { name: "Help", emoji: "🎫", color: "#38BDF8", desc: "Press to open a ticket for general assistance" },
     report: { name: "Report", emoji: "⚠️", color: "#EF4444", desc: "Press to open a ticket to report a player or bug" }
+};
+
+// Ticket types for Normal panel
+const NORMAL_TICKET_TYPES = {
+    general: { name: "General Support", emoji: "📝", color: "#5865F2", desc: "General questions and assistance" },
+    question: { name: "Question", emoji: "❓", color: "#FEE75C", desc: "Ask anything you want to know" },
+    feedback: { name: "Feedback", emoji: "💬", color: "#57F287", desc: "Share your feedback or suggestions" },
+    other: { name: "Other", emoji: "📌", color: "#9B59B6", desc: "Any other topic not listed above" }
 };
 
 const APPLICATION_POSITIONS = {
@@ -235,11 +244,8 @@ async function generateTranscript(channel, ticketData) {
 
 function canManageTickets(member) {
     if (!member) return false;
-    // Check if member has support role
     if (SUPPORT_ROLE_ID && member.roles.cache.has(SUPPORT_ROLE_ID)) return true;
-    // Check if member has any staff role
     if (staffRolesArray.length > 0 && staffRolesArray.some(roleId => member.roles.cache.has(roleId))) return true;
-    // Check if member is admin
     if (member.permissions.has(PermissionFlagsBits.Administrator)) return true;
     return false;
 }
@@ -301,9 +307,9 @@ async function safeChannelBulkDelete(channel, limit = 10) {
 }
 
 // ============================================
-// TICKET PANEL - NEW DESIGN (LIKE THE IMAGE)
+// TICKET PANEL - MINECRAFT REPORT (LIKE THE IMAGE)
 // ============================================
-async function createTicketPanel(channel) {
+async function createMinecraftTicketPanel(channel) {
     await safeChannelBulkDelete(channel, 10);
     
     const embed = new EmbedBuilder()
@@ -337,6 +343,63 @@ async function createTicketPanel(channel) {
         );
     
     await channel.send({ embeds: [embed], components: [row] });
+}
+
+// ============================================
+// TICKET PANEL - NORMAL (NEW PANEL)
+// ============================================
+async function createNormalTicketPanel(channel) {
+    await safeChannelBulkDelete(channel, 10);
+    
+    const embed = new EmbedBuilder()
+        .setColor(0x2b2d31)
+        .setTitle("Bonbon Utilities | Cj & RCS crack か")
+        .setDescription(
+            `**📬 General Support Tickets**\n\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+            `**📝 General Support**\n` +
+            `Open a ticket for general questions and assistance\n\n` +
+            `**❓ Question**\n` +
+            `Ask anything you want to know\n\n` +
+            `**💬 Feedback**\n` +
+            `Share your feedback or suggestions\n\n` +
+            `**📌 Other**\n` +
+            `Any other topic not listed above\n\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+            `2026 BONBON™. We are here to help you!`
+        )
+        .setFooter({ text: "Support System • 24/7", iconURL: client.user.displayAvatarURL() })
+        .setTimestamp();
+
+    const row1 = new ActionRowBuilder()
+        .addComponents(
+            new ButtonBuilder()
+                .setCustomId('normal_ticket_general')
+                .setLabel("General Support")
+                .setEmoji("📝")
+                .setStyle(ButtonStyle.Primary),
+            new ButtonBuilder()
+                .setCustomId('normal_ticket_question')
+                .setLabel("Question")
+                .setEmoji("❓")
+                .setStyle(ButtonStyle.Success)
+        );
+
+    const row2 = new ActionRowBuilder()
+        .addComponents(
+            new ButtonBuilder()
+                .setCustomId('normal_ticket_feedback')
+                .setLabel("Feedback")
+                .setEmoji("💬")
+                .setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder()
+                .setCustomId('normal_ticket_other')
+                .setLabel("Other")
+                .setEmoji("📌")
+                .setStyle(ButtonStyle.Danger)
+        );
+    
+    await channel.send({ embeds: [embed], components: [row1, row2] });
 }
 
 // ============================================
@@ -658,7 +721,8 @@ function buildApplicationEmbed(application, user, status = null, reason = null) 
 client.once('ready', async () => {
     console.log(`✨ ${client.user.tag} is online!`);
     console.log(`📋 Bonbon Utilities | Cj & RCS crack か - Ticket & Application Bot`);
-    console.log(`🎫 Ticket Panel Channel: ${TICKET_PANEL_CHANNEL_ID_NEW}`);
+    console.log(`🎫 Minecraft Ticket Panel Channel: ${TICKET_PANEL_CHANNEL_ID_NEW}`);
+    console.log(`🎫 Normal Ticket Panel Channel: ${TICKET_PANEL_CHANNEL_ID_NORMAL}`);
     console.log(`📝 Ticket Log Channel: ${TICKET_LOG_CHANNEL_ID_NEW}`);
     console.log(`👑 Support Role: ${SUPPORT_ROLE_ID}`);
     
@@ -692,13 +756,22 @@ client.once('ready', async () => {
         console.log(`\n✓ Accepted Role: ${acceptedRole ? acceptedRole.name : 'Unknown role'} (${ACCEPTED_ROLE_ID})`);
     }
 
-    // Create ticket panel in the new channel
-    const ticketPanelChannel = client.channels.cache.get(TICKET_PANEL_CHANNEL_ID_NEW);
-    if (ticketPanelChannel) {
-        await createTicketPanel(ticketPanelChannel);
-        console.log("\n✅ Ticket panel deployed in channel: " + TICKET_PANEL_CHANNEL_ID_NEW);
+    // Create Minecraft ticket panel
+    const minecraftPanelChannel = client.channels.cache.get(TICKET_PANEL_CHANNEL_ID_NEW);
+    if (minecraftPanelChannel) {
+        await createMinecraftTicketPanel(minecraftPanelChannel);
+        console.log("\n✅ Minecraft Ticket panel deployed in channel: " + TICKET_PANEL_CHANNEL_ID_NEW);
     } else {
-        console.log(`\n❌ Ticket panel channel ${TICKET_PANEL_CHANNEL_ID_NEW} not found!`);
+        console.log(`\n❌ Minecraft Ticket panel channel ${TICKET_PANEL_CHANNEL_ID_NEW} not found!`);
+    }
+
+    // Create Normal ticket panel
+    const normalPanelChannel = client.channels.cache.get(TICKET_PANEL_CHANNEL_ID_NORMAL);
+    if (normalPanelChannel) {
+        await createNormalTicketPanel(normalPanelChannel);
+        console.log("✅ Normal Ticket panel deployed in channel: " + TICKET_PANEL_CHANNEL_ID_NORMAL);
+    } else {
+        console.log(`❌ Normal Ticket panel channel ${TICKET_PANEL_CHANNEL_ID_NORMAL} not found!`);
     }
 
     if (APP_PANEL_CHANNEL_ID) {
@@ -714,11 +787,12 @@ client.once('ready', async () => {
 });
 
 // ============================================
-// TICKET SYSTEM - BUTTON HANDLER
+// TICKET SYSTEM - BUTTON HANDLER (MINECRAFT)
 // ============================================
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isButton()) return;
     
+    // Handle Minecraft ticket buttons
     if (interaction.customId.startsWith('ticket_')) {
         const type = interaction.customId.replace('ticket_', '');
         const typeConfig = TICKET_TYPES[type];
@@ -805,7 +879,117 @@ client.on('interactionCreate', async (interaction) => {
             const mentionText = `${interaction.user} | ${supportMention}`;
             await ticketChannel.send({ content: mentionText, embeds: [welcomeEmbed], components: [actionRow] });
             
-            // Send log to the new log channel
+            const logEmbed = new EmbedBuilder()
+                .setTitle("Bonbon Utilities | 🎫 TICKET OPENED")
+                .setDescription(`**User:** ${interaction.user.tag}\n**Type:** ${typeConfig.name}\n**Channel:** ${ticketChannel}`)
+                .setColor(0x22C55E)
+                .setTimestamp();
+            await sendLog(interaction.guild, TICKET_LOG_CHANNEL_ID_NEW, logEmbed);
+            
+            const successEmbed = new EmbedBuilder()
+                .setTitle("Bonbon Utilities | ✅ TICKET CREATED")
+                .setDescription(`> Your ticket has been created!\n> **Channel:** ${ticketChannel}\n> Support team will assist you shortly.`)
+                .setColor(0x22C55E);
+            
+            await interaction.editReply({ embeds: [successEmbed], ephemeral: true });
+            
+        } catch (err) {
+            console.error(err);
+            const errorEmbed = new EmbedBuilder()
+                .setTitle("Bonbon Utilities | ❌ ERROR")
+                .setDescription("> Failed to create ticket. Please contact an administrator.")
+                .setColor(0xEF4444);
+            await interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
+        }
+    }
+    
+    // Handle Normal ticket buttons
+    else if (interaction.customId.startsWith('normal_ticket_')) {
+        const type = interaction.customId.replace('normal_ticket_', '');
+        const typeConfig = NORMAL_TICKET_TYPES[type];
+        if (!typeConfig) return;
+        
+        for (const [id, data] of activeTickets) {
+            if (data.userId === interaction.user.id) {
+                const errorEmbed = new EmbedBuilder()
+                    .setTitle("❌ TICKET LIMIT REACHED")
+                    .setDescription(`> You already have an open ticket!\n> Please close your existing ticket before creating a new one.\n\n**Channel:** <#${id}>`)
+                    .setColor(0xEF4444);
+                return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+            }
+        }
+        
+        await interaction.reply({ 
+            embeds: [new EmbedBuilder().setDescription("🔄 `Creating your ticket...`").setColor(0x38BDF8)], 
+            ephemeral: true 
+        });
+        
+        const ticketName = `${type}-${interaction.user.username}`;
+        
+        try {
+            const ticketOverwrites = getTicketPermissionOverwrites();
+            
+            const ticketChannel = await interaction.guild.channels.create({
+                name: ticketName,
+                type: ChannelType.GuildText,
+                parent: TICKET_CATEGORY_ID,
+                topic: `Ticket Owner: ${interaction.user.tag} (${interaction.user.id}) | Type: ${typeConfig.name}`,
+                permissionOverwrites: [
+                    { id: interaction.guild.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.ReadMessageHistory] },
+                    { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles] },
+                    ...ticketOverwrites
+                ]
+            });
+            
+            activeTickets.set(ticketChannel.id, { 
+                userId: interaction.user.id, 
+                userTag: interaction.user.tag,
+                type: typeConfig.name,
+                createdAt: Date.now()
+            });
+            saveActiveTickets();
+            
+            const welcomeEmbed = new EmbedBuilder()
+                .setTitle(`Bonbon Utilities | ${typeConfig.emoji} ${typeConfig.name.toUpperCase()} TICKET`)
+                .setDescription(
+                    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+                    `**👋 Welcome ${interaction.user}!**\n\n` +
+                    `> **Ticket Type:** ${typeConfig.name}\n` +
+                    `> **Category:** ${typeConfig.desc}\n\n` +
+                    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+                    `**📝 INSTRUCTIONS**\n` +
+                    `• Please describe your topic in detail\n` +
+                    `• Provide any relevant information\n` +
+                    `• Our team will respond shortly\n\n` +
+                    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+                    `**🔒 TICKET CONTROLS**\n` +
+                    `• Click **Close Ticket** to end this session\n` +
+                    `• Click **Claim Ticket** to assign a staff member\n\n` +
+                    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
+                )
+                .setColor(typeConfig.color)
+                .setImage(BANNER_URL)
+                .setFooter({ text: `Ticket ID: ${ticketChannel.id} | Support Team`, iconURL: interaction.guild.iconURL() })
+                .setTimestamp();
+            
+            const actionRow = new ActionRowBuilder()
+                .addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('close_ticket')
+                        .setLabel('CLOSE TICKET')
+                        .setEmoji('🔒')
+                        .setStyle(ButtonStyle.Danger),
+                    new ButtonBuilder()
+                        .setCustomId('claim_ticket')
+                        .setLabel('CLAIM TICKET')
+                        .setEmoji('🎫')
+                        .setStyle(ButtonStyle.Secondary)
+                );
+            
+            const supportMention = getSupportRoleMention();
+            const mentionText = `${interaction.user} | ${supportMention}`;
+            await ticketChannel.send({ content: mentionText, embeds: [welcomeEmbed], components: [actionRow] });
+            
             const logEmbed = new EmbedBuilder()
                 .setTitle("Bonbon Utilities | 🎫 TICKET OPENED")
                 .setDescription(`**User:** ${interaction.user.tag}\n**Type:** ${typeConfig.name}\n**Channel:** ${ticketChannel}`)
@@ -859,7 +1043,6 @@ client.on('interactionCreate', async (interaction) => {
             }
         }
         
-        // Send log to the new log channel
         const logEmbed = new EmbedBuilder()
             .setTitle("Bonbon Utilities | 🔒 TICKET CLOSED")
             .setDescription(`**User:** ${ticketData.userTag}\n**Closed by:** ${interaction.user.tag}\n**Channel:** #${interaction.channel.name}`)
@@ -910,7 +1093,6 @@ client.on('interactionCreate', async (interaction) => {
         
         await interaction.reply({ embeds: [claimEmbed] });
         
-        // Send log to the new log channel
         const logEmbed = new EmbedBuilder()
             .setTitle("Bonbon Utilities | 🎫 TICKET CLAIMED")
             .setDescription(`**Channel:** #${interaction.channel.name}\n**Staff:** ${interaction.user.tag}\n**Ticket Owner:** ${ticketData.userTag}`)
@@ -1051,7 +1233,6 @@ client.on('interactionCreate', async (interaction) => {
     const acceptedEmbed = buildApplicationEmbed(application, user, 'accepted');
     await sendLog(guild, APP_ACCEPTED_CHANNEL_ID, acceptedEmbed);
     
-    // Add role based on position
     if (positionConfig.roleId && member) {
         try {
             await member.roles.add(positionConfig.roleId);
