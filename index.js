@@ -308,7 +308,7 @@ async function createTicketPanel(channel) {
     
     const embed = new EmbedBuilder()
         .setColor(0x2b2d31)
-        .setTitle("Bonbon Utilities")
+        .setTitle("Bonbon Utilities | Cj & RCS crack か")
         .setDescription(
             `**Minecraft Support Tickets**\n\n` +
             `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
@@ -346,9 +346,9 @@ async function createApplicationPanel(channel) {
     await safeChannelBulkDelete(channel, 10);
     
     const embed = new EmbedBuilder()
-        .setTitle("📋 STAFF & CONTRIBUTOR APPLICATION SYSTEM")
+        .setTitle("Bonbon Utilities | Cj & RCS crack か")
         .setDescription(
-            `> **Join our team and help shape the community!**\n\n` +
+            `> **📋 STAFF & CONTRIBUTOR APPLICATION SYSTEM**\n\n` +
             `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
             `**📌 AVAILABLE POSITIONS**\n` +
             `• 🛠 **Staff Team** - Moderate and manage the server\n` +
@@ -446,7 +446,7 @@ async function startApplication(user, position) {
         : `I will ask you **${questions.length} questions**.\nPlease answer each question honestly.\n\n**Type \`cancel\` at any time to cancel your application.**\n\nLet's begin! 🚀`;
     
     const welcomeEmbed = new EmbedBuilder()
-        .setTitle(`${positionConfig.emoji} ${positionConfig.name} Application`)
+        .setTitle(`Bonbon Utilities | Cj & RCS crack か | ${positionConfig.emoji} ${positionConfig.name} Application`)
         .setDescription(description)
         .setColor(typeof positionConfig.color === 'string' ? parseInt(positionConfig.color.replace('#', ''), 16) : positionConfig.color)
         .setTimestamp();
@@ -473,7 +473,7 @@ async function sendNextQuestion(userId) {
     
     const question = questions[application.step];
     const questionEmbed = new EmbedBuilder()
-        .setTitle(`📝 Question ${application.step + 1}/${questions.length}`)
+        .setTitle(`Bonbon Utilities | 📝 Question ${application.step + 1}/${questions.length}`)
         .setDescription(`**${question.question}**\n\n\`\`\`${question.example}\`\`\``)
         .setColor(0x5865F2)
         .setFooter({ text: "Type your answer below • Type 'cancel' to cancel" });
@@ -552,7 +552,7 @@ async function submitApplication(userId) {
         : `Your application for **${application.positionName}** has been submitted!\n\n**What happens next?**\n• Our team will review your application within 48 hours\n• You will be contacted via DM if you're selected\n• Please be patient\n\nThank you for your interest! 🎉`;
     
     const confirmEmbed = new EmbedBuilder()
-        .setTitle("✅ APPLICATION SUBMITTED")
+        .setTitle("Bonbon Utilities | ✅ APPLICATION SUBMITTED")
         .setDescription(successMessage)
         .setColor(0x22C55E)
         .setTimestamp();
@@ -571,7 +571,7 @@ async function cancelApplication(userId) {
     const user = await client.users.fetch(userId).catch(() => null);
     if (user) {
         const cancelEmbed = new EmbedBuilder()
-            .setTitle("❌ Application Cancelled")
+            .setTitle("Bonbon Utilities | ❌ Application Cancelled")
             .setDescription("Your application has been cancelled. You can start a new application anytime.")
             .setColor(0xEF4444)
             .setTimestamp();
@@ -600,7 +600,7 @@ function buildApplicationEmbed(application, user, status = null, reason = null) 
     }
     
     const embed = new EmbedBuilder()
-        .setTitle(title)
+        .setTitle(`Bonbon Utilities | ${title}`)
         .setDescription(
             `**Applicant:** ${user.tag} (<@${application.userId}>)\n` +
             `**Position:** ${positionConfig.name}\n` +
@@ -657,7 +657,7 @@ function buildApplicationEmbed(application, user, status = null, reason = null) 
 // ============================================
 client.once('ready', async () => {
     console.log(`✨ ${client.user.tag} is online!`);
-    console.log(`📋 Ticket & Application Bot - Multi-Role Support | Wallpaper Uploader System`);
+    console.log(`📋 Bonbon Utilities | Cj & RCS crack か - Ticket & Application Bot`);
     console.log(`🎫 Ticket Panel Channel: ${TICKET_PANEL_CHANNEL_ID_NEW}`);
     console.log(`📝 Ticket Log Channel: ${TICKET_LOG_CHANNEL_ID_NEW}`);
     console.log(`👑 Support Role: ${SUPPORT_ROLE_ID}`);
@@ -750,7 +750,7 @@ client.on('interactionCreate', async (interaction) => {
                 parent: TICKET_CATEGORY_ID,
                 topic: `Ticket Owner: ${interaction.user.tag} (${interaction.user.id}) | Type: ${typeConfig.name}`,
                 permissionOverwrites: [
-                    { id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
+                    { id: interaction.guild.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.ReadMessageHistory] },
                     { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles] },
                     ...ticketOverwrites
                 ]
@@ -765,7 +765,7 @@ client.on('interactionCreate', async (interaction) => {
             saveActiveTickets();
             
             const welcomeEmbed = new EmbedBuilder()
-                .setTitle(`${typeConfig.emoji} ${typeConfig.name.toUpperCase()} TICKET`)
+                .setTitle(`Bonbon Utilities | ${typeConfig.emoji} ${typeConfig.name.toUpperCase()} TICKET`)
                 .setDescription(
                     `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
                     `**👋 Welcome ${interaction.user}!**\n\n` +
@@ -807,14 +807,14 @@ client.on('interactionCreate', async (interaction) => {
             
             // Send log to the new log channel
             const logEmbed = new EmbedBuilder()
-                .setTitle("🎫 TICKET OPENED")
+                .setTitle("Bonbon Utilities | 🎫 TICKET OPENED")
                 .setDescription(`**User:** ${interaction.user.tag}\n**Type:** ${typeConfig.name}\n**Channel:** ${ticketChannel}`)
                 .setColor(0x22C55E)
                 .setTimestamp();
             await sendLog(interaction.guild, TICKET_LOG_CHANNEL_ID_NEW, logEmbed);
             
             const successEmbed = new EmbedBuilder()
-                .setTitle("✅ TICKET CREATED")
+                .setTitle("Bonbon Utilities | ✅ TICKET CREATED")
                 .setDescription(`> Your ticket has been created!\n> **Channel:** ${ticketChannel}\n> Support team will assist you shortly.`)
                 .setColor(0x22C55E);
             
@@ -823,7 +823,7 @@ client.on('interactionCreate', async (interaction) => {
         } catch (err) {
             console.error(err);
             const errorEmbed = new EmbedBuilder()
-                .setTitle("❌ ERROR")
+                .setTitle("Bonbon Utilities | ❌ ERROR")
                 .setDescription("> Failed to create ticket. Please contact an administrator.")
                 .setColor(0xEF4444);
             await interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
@@ -851,7 +851,7 @@ client.on('interactionCreate', async (interaction) => {
             const transcriptChannel = interaction.guild.channels.cache.get(TRANSCRIPT_CHANNEL_ID);
             if (transcriptChannel) {
                 const transcriptEmbed = new EmbedBuilder()
-                    .setTitle("📄 TICKET TRANSCRIPT")
+                    .setTitle("Bonbon Utilities | 📄 TICKET TRANSCRIPT")
                     .setDescription(`**Channel:** ${interaction.channel.name}\n**Closed by:** ${interaction.user.tag}\n**Type:** ${ticketData.type || 'Unknown'}\n**Owner:** ${ticketData.userTag || 'Unknown'}`)
                     .setColor(0xF97316)
                     .setTimestamp();
@@ -861,7 +861,7 @@ client.on('interactionCreate', async (interaction) => {
         
         // Send log to the new log channel
         const logEmbed = new EmbedBuilder()
-            .setTitle("🔒 TICKET CLOSED")
+            .setTitle("Bonbon Utilities | 🔒 TICKET CLOSED")
             .setDescription(`**User:** ${ticketData.userTag}\n**Closed by:** ${interaction.user.tag}\n**Channel:** #${interaction.channel.name}`)
             .setColor(0xEF4444)
             .setTimestamp();
@@ -903,7 +903,7 @@ client.on('interactionCreate', async (interaction) => {
         saveActiveTickets();
         
         const claimEmbed = new EmbedBuilder()
-            .setTitle("🎫 TICKET CLAIMED")
+            .setTitle("Bonbon Utilities | 🎫 TICKET CLAIMED")
             .setDescription(`> **${interaction.user}** has claimed this ticket and will assist you shortly.`)
             .setColor(0x22C55E)
             .setTimestamp();
@@ -912,7 +912,7 @@ client.on('interactionCreate', async (interaction) => {
         
         // Send log to the new log channel
         const logEmbed = new EmbedBuilder()
-            .setTitle("🎫 TICKET CLAIMED")
+            .setTitle("Bonbon Utilities | 🎫 TICKET CLAIMED")
             .setDescription(`**Channel:** #${interaction.channel.name}\n**Staff:** ${interaction.user.tag}\n**Ticket Owner:** ${ticketData.userTag}`)
             .setColor(0x3B82F6)
             .setTimestamp();
@@ -1078,7 +1078,7 @@ client.on('interactionCreate', async (interaction) => {
               `• Welcome to the team ! 🎉`;
         
         const acceptDMEmbed = new EmbedBuilder()
-            .setTitle("✅ Félicitations ! Candidature Acceptée")
+            .setTitle("Bonbon Utilities | ✅ Félicitations ! Candidature Acceptée")
             .setDescription(successMessage)
             .setColor(0x22C55E)
             .setTimestamp();
@@ -1089,7 +1089,7 @@ client.on('interactionCreate', async (interaction) => {
     
     await interaction.reply({ 
         embeds: [new EmbedBuilder()
-            .setTitle("✅ Candidature Acceptée")
+            .setTitle("Bonbon Utilities | ✅ Candidature Acceptée")
             .setDescription(`Vous avez accepté la candidature de **${user.tag}** pour **${positionConfig.name}**.`)
             .setColor(0x22C55E)
         ], 
@@ -1198,7 +1198,7 @@ client.on('interactionCreate', async (interaction) => {
     
     try {
         const rejectDMEmbed = new EmbedBuilder()
-            .setTitle("❌ Candidature Refusée")
+            .setTitle("Bonbon Utilities | ❌ Candidature Refusée")
             .setDescription(
                 `**Bonjour ${user.username}**,\n\n` +
                 `Nous vous remercions d'avoir postulé pour **${positionConfig.name}**.\n\n` +
@@ -1216,7 +1216,7 @@ client.on('interactionCreate', async (interaction) => {
     
     await interaction.reply({ 
         embeds: [new EmbedBuilder()
-            .setTitle("❌ Candidature Refusée")
+            .setTitle("Bonbon Utilities | ❌ Candidature Refusée")
             .setDescription(`Vous avez refusé la candidature de **${user.tag}** pour **${positionConfig.name}**.\n\n**Raison:** ${reason}`)
             .setColor(0xEF4444)
         ], 
