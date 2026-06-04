@@ -756,6 +756,26 @@ client.once('ready', async () => {
         console.log(`\n✓ Accepted Role: ${acceptedRole ? acceptedRole.name : 'Unknown role'} (${ACCEPTED_ROLE_ID})`);
     }
 
+    // Fix channel permissions for ticket panel channels - EVERYONE CAN SEE
+    const fixChannelPermissions = async (channelId) => {
+        const channel = client.channels.cache.get(channelId);
+        if (channel) {
+            try {
+                await channel.permissionOverwrites.edit(guild.id, {
+                    ViewChannel: true,
+                    ReadMessageHistory: true
+                });
+                console.log(`✅ Fixed permissions for channel: ${channel.name} (${channelId})`);
+            } catch (error) {
+                console.error(`❌ Failed to fix permissions for ${channelId}:`, error.message);
+            }
+        }
+    };
+
+    await fixChannelPermissions(TICKET_PANEL_CHANNEL_ID_NEW);
+    await fixChannelPermissions(TICKET_PANEL_CHANNEL_ID_NORMAL);
+    if (APP_PANEL_CHANNEL_ID) await fixChannelPermissions(APP_PANEL_CHANNEL_ID);
+
     // Create Minecraft ticket panel
     const minecraftPanelChannel = client.channels.cache.get(TICKET_PANEL_CHANNEL_ID_NEW);
     if (minecraftPanelChannel) {
@@ -784,6 +804,7 @@ client.once('ready', async () => {
 
     console.log(`\n🚀 Bot is ready!`);
     console.log(`💾 Ticket persistence enabled - ${activeTickets.size} tickets restored`);
+    console.log(`👀 All panel channels are now visible to everyone!`);
 });
 
 // ============================================
@@ -1410,6 +1431,30 @@ client.on('interactionCreate', async (interaction) => {
         row.components.forEach(component => component.setDisabled(true));
         await originalMessageToDisable.edit({ components: [row] }).catch(() => {});
         client.denyMessageMap.delete(`${userId}_${position}`);
+    }
+});
+
+// ============================================
+// GUILD MEMBER ADD - FIX PERMISSIONS FOR NEW MEMBERS
+// ============================================
+client.on('guildMemberAdd', async (member) => {
+    // Ensure new members can see the ticket panel channels
+    const panelChannels = [TICKET_PANEL_CHANNEL_ID_NEW, TICKET_PANEL_CHANNEL_ID_NORMAL];
+    if (APP_PANEL_CHANNEL_ID) panelChannels.push(APP_PANEL_CHANNEL_ID);
+    
+    for (const channelId of panelChannels) {
+        const channel = member.guild.channels.cache.get(channelId);
+        if (channel) {
+            try {
+                // Make sure @everyone can see the channel
+                await channel.permissionOverwrites.edit(member.guild.id, {
+                    ViewChannel: true,
+                    ReadMessageHistory: true
+                });
+            } catch (error) {
+                console.error(`Failed to set permissions for ${channel.name}:`, error.message);
+            }
+        }
     }
 });
 
